@@ -8,7 +8,6 @@ import '../models/request.dart';
 import '../utils/date_formatter.dart';
 import 'login_screen.dart';
 import 'request_detail_screen.dart';
-import 'create_request_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
 import 'dashboard_screen.dart';
@@ -24,14 +23,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  
+
   @override
   void initState() {
     super.initState();
     // Charger les demandes de l'utilisateur
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<RequestProvider>(context, listen: false).fetchUserRequests();
-      Provider.of<NotificationProvider>(context, listen: false).fetchUserNotifications();
+      Provider.of<NotificationProvider>(context, listen: false)
+          .fetchUserNotifications();
     });
   }
 
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final notificationProvider = Provider.of<NotificationProvider>(context);
-    
+
     // Liste des écrans du bottom navigation bar
     final List<Widget> _widgetOptions = <Widget>[
       const DashboardScreen(), // Tableau de bord comme premier onglet
@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const NotificationScreen(),
       const ProfileScreen(),
     ];
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Portail RH'),
@@ -67,7 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: const Icon(Icons.notifications),
                 onPressed: () {
                   setState(() {
-                    _selectedIndex = 3; // Aller à l'écran des notifications (index 3)
+                    _selectedIndex =
+                        3; // Aller à l'écran des notifications (index 3)
                   });
                 },
               ),
@@ -128,7 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(
             icon: Badge(
-              isLabelVisible: notificationProvider.unreadNotifications.isNotEmpty,
+              isLabelVisible:
+                  notificationProvider.unreadNotifications.isNotEmpty,
               label: Text('${notificationProvider.unreadNotifications.length}'),
               child: const Icon(Icons.notifications),
             ),
@@ -148,12 +150,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRequestsTab() {
     final requestProvider = Provider.of<RequestProvider>(context);
-    final crossPlatformProvider = Provider.of<CrossPlatformProvider>(context, listen: false);
-    
+    final crossPlatformProvider =
+        Provider.of<CrossPlatformProvider>(context, listen: false);
+
     if (requestProvider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (requestProvider.error != null) {
       return Center(
         child: Column(
@@ -176,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    
+
     if (requestProvider.requests.isEmpty) {
       return Center(
         child: Column(
@@ -209,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: () => requestProvider.fetchUserRequests(),
       child: Column(
@@ -223,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   // Charger les demandes cross-platform avant de naviguer
                   crossPlatformProvider.fetchAllSourceRequests();
-                  
+
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const CrossPlatformRequestsScreen(),
@@ -240,7 +243,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.compare_arrows, color: Colors.blue),
+                        child: const Icon(Icons.compare_arrows,
+                            color: Colors.blue),
                       ),
                       const SizedBox(width: 16),
                       const Expanded(
@@ -257,7 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: 4),
                             Text(
                               'Voir les demandes des applications web et mobile',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -269,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          
+
           // Liste des demandes
           Expanded(
             child: ListView.builder(
@@ -301,14 +306,15 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         statusColor = Colors.orange;
     }
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
       child: InkWell(
         onTap: () {
           // Naviguer vers les détails de la demande
-          final requestProvider = Provider.of<RequestProvider>(context, listen: false);
+          final requestProvider =
+              Provider.of<RequestProvider>(context, listen: false);
           requestProvider.selectRequest(request);
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -334,7 +340,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Statut
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -357,7 +364,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Icon(Icons.date_range, size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormatter.formatDateRange(request.startDate, request.endDate),
+                    DateFormatter.formatDateRange(
+                        request.startDate, request.endDate),
                     style: const TextStyle(color: Colors.grey),
                   ),
                 ],

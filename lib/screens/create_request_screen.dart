@@ -7,7 +7,7 @@ import '../models/request.dart';
 
 class CreateRequestScreen extends StatefulWidget {
   final String requestType;
-  
+
   const CreateRequestScreen({
     Key? key,
     required this.requestType,
@@ -20,34 +20,34 @@ class CreateRequestScreen extends StatefulWidget {
 class _CreateRequestScreenState extends State<CreateRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  
+
   late String _selectedRequestType;
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 1));
   int _durationInDays = 1;
-  
+
   // Service de stockage partagé pour ajouter les demandes
   final _sharedStorageService = SharedStorageService();
-  
+
   @override
   void initState() {
     super.initState();
     _selectedRequestType = widget.requestType;
     _calculateDuration();
   }
-  
+
   void _calculateDuration() {
     // Calculer la durée en jours entre la date de début et la date de fin
     _durationInDays = _endDate.difference(_startDate).inDays + 1;
     setState(() {});
   }
-  
+
   @override
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -55,7 +55,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
-    
+
     if (picked != null && picked != _startDate) {
       setState(() {
         _startDate = picked;
@@ -68,7 +68,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       });
     }
   }
-  
+
   Future<void> _selectEndDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -76,7 +76,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       firstDate: _startDate,
       lastDate: DateTime(2100),
     );
-    
+
     if (picked != null && picked != _endDate) {
       setState(() {
         _endDate = picked;
@@ -85,24 +85,25 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       });
     }
   }
-  
+
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
       try {
         // Formater les dates au format ISO
         final startDateStr = DateFormat('yyyy-MM-dd').format(_startDate);
         final endDateStr = DateFormat('yyyy-MM-dd').format(_endDate);
-        
+
         // Générer la description complète
         String description = _descriptionController.text.trim();
         if (description.isEmpty) {
           // Si la description est vide, générer une description par défaut
-          description = 'Congé du ${DateFormat('yyyy-MM-dd').format(_startDate)} au ${DateFormat('yyyy-MM-dd').format(_endDate)} ($_durationInDays jour${_durationInDays > 1 ? 's' : ''})';
+          description =
+              'Congé du ${DateFormat('yyyy-MM-dd').format(_startDate)} au ${DateFormat('yyyy-MM-dd').format(_endDate)} ($_durationInDays jour${_durationInDays > 1 ? 's' : ''})';
         }
-        
+
         // Créer une map pour stocker les détails spécifiques au type de demande
         Map<String, dynamic> details = {};
-        
+
         // Ajouter les détails spécifiques en fonction du type de demande
         if (_selectedRequestType == 'Congé') {
           details = {
@@ -135,7 +136,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             'reason': _descriptionController.text,
           };
         }
-        
+
         // Créer l'objet Request
         final request = Request(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -148,16 +149,17 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
           userId: 1, // Convertir en int car le modèle attend un int
           details: details,
         );
-        
+
         // Ajouter la demande via le provider
-        await Provider.of<RequestProvider>(context, listen: false).createRequest(
+        await Provider.of<RequestProvider>(context, listen: false)
+            .createRequest(
           type: _selectedRequestType,
           startDate: _startDate.toIso8601String(),
           endDate: _endDate.toIso8601String(),
           description: _descriptionController.text,
           details: details,
         );
-        
+
         // Afficher un message de succès
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -165,7 +167,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Retourner à l'écran précédent
         Navigator.of(context).pop();
       } catch (e) {
@@ -188,7 +190,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   final TextEditingController _costController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
-  
+
   // Options pour les types de congé
   final List<String> _leaveTypes = [
     'Congé annuel',
@@ -199,15 +201,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     'Congé paternité'
   ];
   String _selectedLeaveType = 'Congé annuel';
-  
+
   // Options pour les périodes de la journée
-  final List<String> _dayParts = [
-    'Journée complète',
-    'Matin',
-    'Après-midi'
-  ];
+  final List<String> _dayParts = ['Journée complète', 'Matin', 'Après-midi'];
   String _selectedDayPart = 'Journée complète';
-  
+
   // Options pour les types de formation
   final List<String> _trainingTypes = [
     'Technique',
@@ -215,7 +213,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     'Certification'
   ];
   String _selectedTrainingType = 'Technique';
-  
+
   // Options pour les types de prêt
   final List<String> _loanTypes = [
     'Prêt personnel',
@@ -223,7 +221,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     'Prêt immobilier'
   ];
   String _selectedLoanType = 'Prêt personnel';
-  
+
   @override
   Widget build(BuildContext context) {
     final requestProvider = Provider.of<RequestProvider>(context);
@@ -269,7 +267,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                   ],
                 ),
               ),
-              
+
               // Champs spécifiques au type de demande
               Builder(builder: (context) {
                 if (_selectedRequestType == 'Congé') {
@@ -285,7 +283,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                 }
               }),
               const SizedBox(height: 16),
-              
+
               // Date de début
               Container(
                 decoration: BoxDecoration(
@@ -325,7 +323,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                   ],
                 ),
               ),
-              
+
               // Date de fin
               Container(
                 decoration: BoxDecoration(
@@ -365,7 +363,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                   ],
                 ),
               ),
-              
+
               // Durée
               Container(
                 decoration: BoxDecoration(
@@ -390,7 +388,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Description
               Container(
                 decoration: BoxDecoration(
@@ -423,7 +421,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                   ],
                 ),
               ),
-              
+
               // Bouton de soumission
               SizedBox(
                 width: double.infinity,
@@ -451,7 +449,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       ),
     );
   }
-  
+
   // Construction du formulaire de demande de congé
   Widget _buildLeaveRequestFields() {
     return Column(
@@ -494,7 +492,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                       _selectedLeaveType = newValue;
                       // Ajuster automatiquement la date de fin pour congé maternité/paternité
                       if (newValue == 'Congé maternité') {
-                        _endDate = _startDate.add(const Duration(days: 98)); // 14 semaines
+                        _endDate = _startDate
+                            .add(const Duration(days: 98)); // 14 semaines
                       } else if (newValue == 'Congé paternité') {
                         _endDate = _startDate.add(const Duration(days: 25));
                       }
@@ -506,7 +505,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Période de la journée
         Container(
           decoration: BoxDecoration(
@@ -550,7 +549,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Motif
         Container(
           decoration: BoxDecoration(
@@ -592,7 +591,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       ],
     );
   }
-  
+
   // Construction du formulaire de demande de formation
   Widget _buildTrainingRequestFields() {
     return Column(
@@ -634,7 +633,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Organisme de formation
         Container(
           decoration: BoxDecoration(
@@ -672,7 +671,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Type de formation
         Container(
           decoration: BoxDecoration(
@@ -716,7 +715,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Objectifs de la formation
         Container(
           decoration: BoxDecoration(
@@ -755,7 +754,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Coût estimé
         Container(
           decoration: BoxDecoration(
@@ -797,7 +796,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       ],
     );
   }
-  
+
   // Construction du formulaire de demande de prêt
   Widget _buildLoanRequestFields() {
     return Column(
@@ -845,7 +844,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Montant du prêt
         Container(
           decoration: BoxDecoration(
@@ -884,7 +883,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Motif du prêt
         Container(
           decoration: BoxDecoration(
@@ -926,7 +925,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       ],
     );
   }
-  
+
   // Construction du formulaire de demande d'avance
   Widget _buildAdvanceRequestFields() {
     return Column(
@@ -969,7 +968,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Motif de l'avance
         Container(
           decoration: BoxDecoration(
@@ -1011,7 +1010,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       ],
     );
   }
-  
+
   // Construction du formulaire de demande de document
   Widget _buildDocumentRequestFields() {
     return Column(
@@ -1046,7 +1045,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             ],
           ),
         ),
-        
+
         // Motif de la demande
         Container(
           decoration: BoxDecoration(

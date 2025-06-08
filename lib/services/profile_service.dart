@@ -5,35 +5,40 @@ import '../utils/constants.dart';
 
 class ProfileService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
-  // Méthode pour récupérer le profil de l'utilisateur avec fallback
-  Future<Map<String, dynamic>> getUserProfile() async {
+
+  // Récupère le profil utilisateur, ou null si absent
+  Future<Map<String, dynamic>?> getUserProfile() async {
     try {
-      print('CONTOURNEMENT: Utilisation directe du profil par défaut sans appel au serveur');
-      // Ne pas tenter de récupérer le profil du serveur, utiliser directement le profil par défaut
-      final token = await _storage.read(key: 'auth_token'); // Utiliser la clé correcte
+      // Lire token et infos utilisateur stockées localement
+      final token = await _storage.read(key: 'auth_token');
       final userId = await _storage.read(key: 'user_id');
-      final userRole = await _storage.read(key: 'user_role');
-      
-      // Ne pas essayer de récupérer le profil depuis le serveur
-      // Utiliser directement le profil par défaut
-      print('SOLUTION URGENTE: Utilisation directe du profil par défaut');
-      return _getDefaultProfile(userId: userId, role: userRole);
+
+      if (token == null || userId == null) {
+        print('Token ou userId absent, profil non disponible');
+        return null;
+      }
+
+      // Appel API pour récupérer le profil réel
+      final response = await http.get(
+        Uri.parse('${Constants.apiUrl}/users/$userId/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Profil utilisateur récupéré depuis API');
+        return data;
+      } else {
+        print(
+            'Erreur API lors de la récupération du profil: ${response.statusCode}');
+        return null;
+      }
     } catch (e) {
-      print('Erreur générale: $e, utilisation du profil par défaut');
-      return _getDefaultProfile();
+      print('Exception lors de la récupération du profil: $e');
+      return null;
     }
-  }
-  
-  // Profil par défaut en cas d'erreur
-  Map<String, dynamic> _getDefaultProfile({String? userId, String? role}) {
-    return {
-      'id': userId ?? '1',
-      'firstname': 'Utilisateur',
-      'lastname': 'Par Défaut',
-      'email': 'utilisateur@example.com',
-      'role': role ?? 'user',
-      'isDefaultProfile': true, // Marquer comme profil par défaut
-    };
   }
 }

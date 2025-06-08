@@ -6,35 +6,36 @@ import 'auth_service.dart';
 
 class UserService {
   final AuthService _authService = AuthService();
-  
+
   // Méthode pour récupérer le profil de l'utilisateur connecté
-  Future<User> getUserProfile() async {
+  Future<User?> getUserProfile() async {
     try {
-      // SOLUTION URGENTE: Ne pas essayer d'appeler le serveur
-      print('CONTOURNEMENT: Utilisation d\'un profil utilisateur par défaut');
-      
-      // Récupérer l'ID et le rôle de l'utilisateur depuis le stockage local
-      final userId = await _authService.getUserId() ?? '1';
-      final userRole = await _authService.getUserRole() ?? 'user';
-      
-      // Créer un utilisateur par défaut
-      return User(
-        id: int.parse(userId),
-        firstname: 'Utilisateur',
-        lastname: 'Par Défaut',
-        email: 'utilisateur@example.com',
-        role: userRole,
-      );
+      // Récupérer l'ID de l'utilisateur connecté via AuthService
+      final userId = await _authService.getUserId();
+
+      if (userId == null) {
+        print('Aucun utilisateur connecté trouvé');
+        return null; // Ou gérer selon besoin
+      }
+
+      // TODO: Remplacer l'URL par ton endpoint API réel ou ta requête locale en base
+      final url = Uri.parse('${Constants.apiUrl}/users/$userId');
+
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer ${await _authService.getToken()}',
+        'Content-Type': 'application/json',
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return User.fromJson(data);
+      } else {
+        print('Erreur serveur: statut ${response.statusCode}');
+        return null;
+      }
     } catch (e) {
-      print('Erreur lors de la récupération du profil: $e');
-      // En cas d'erreur, retourner un utilisateur par défaut
-      return User(
-        id: 1,
-        firstname: 'Utilisateur',
-        lastname: 'Par Défaut',
-        email: 'utilisateur@example.com',
-        role: 'user',
-      );
+      print('Erreur lors de la récupération du profil utilisateur: $e');
+      return null;
     }
   }
 }

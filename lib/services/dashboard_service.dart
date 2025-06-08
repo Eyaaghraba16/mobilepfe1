@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/request.dart';
 import 'shared_storage_service.dart';
 import 'request_service.dart';
@@ -26,69 +23,57 @@ class DashboardStats {
 class DashboardService {
   final SharedStorageService _sharedStorage = SharedStorageService();
   final RequestService _requestService = RequestService();
-  
-  // Stream controller pour les statistiques du tableau de bord
-  final _dashboardStatsController = StreamController<DashboardStats>.broadcast();
-  
-  // Stream pour écouter les changements de statistiques
-  Stream<DashboardStats> get dashboardStatsStream => _dashboardStatsController.stream;
-  
-  // Abonnement au stream de demandes
+
+  // StreamController broadcast pour notifier les mises à jour des stats
+  final _dashboardStatsController =
+      StreamController<DashboardStats>.broadcast();
+
+  // Stream public pour écouter les statistiques
+  Stream<DashboardStats> get dashboardStatsStream =>
+      _dashboardStatsController.stream;
+
+  // Abonnement aux changements dans les demandes stockées localement
   StreamSubscription<List<Request>>? _requestsSubscription;
-  
-  // Constructeur
+
   DashboardService() {
-    // Écouter les changements dans le stockage partagé
+    // Écoute des changements dans le stockage local
     _requestsSubscription = _sharedStorage.requestsStream.listen((requests) {
-      // Calculer les nouvelles statistiques
       final stats = _calculateStats(requests);
-      
-      // Notifier les écouteurs
       _dashboardStatsController.add(stats);
     });
   }
-  
-  // Libérer les ressources
+
   void dispose() {
     _requestsSubscription?.cancel();
     _dashboardStatsController.close();
   }
-  
-  // Méthode pour charger les données locales
+
+  // Charger les données locales et envoyer les stats
   Future<void> loadLocalData() async {
     try {
-      print('DashboardService: Chargement des données locales...');
-      // Charger les données depuis le stockage local
+      print('[DashboardService] Chargement des données locales...');
       final requests = await _sharedStorage.getRequests();
-      // Calculer les statistiques
       final stats = _calculateStats(requests);
-      // Notifier les écouteurs
       _dashboardStatsController.add(stats);
-      print('DashboardService: Chargement des données locales terminé');
+      print('[DashboardService] Données locales chargées avec succès');
     } catch (e) {
-      print('DashboardService: Erreur lors du chargement des données locales: $e');
+      print('[DashboardService] Erreur chargement données locales: $e');
       rethrow;
     }
   }
 
-  // Récupérer les statistiques du tableau de bord
+  // Récupérer les statistiques, prioritairement depuis l'API, fallback sur local
   Future<DashboardStats> getDashboardStats() async {
     try {
-      // Essayer d'abord de récupérer les données depuis l'API
-      List<Request> requests = await _requestService.getUserRequests();
-      
-      // Calculer les statistiques
+      final requests = await _requestService.getUserRequests();
       return _calculateStats(requests);
     } catch (e) {
-      print('Erreur lors de la récupération des statistiques depuis l\'API: $e');
-      
-      // En cas d'erreur, utiliser les données du stockage partagé
+      print('[DashboardService] Erreur récupération stats API: $e');
       try {
-        List<Request> requests = await _sharedStorage.getRequests();
+        final requests = await _sharedStorage.getRequests();
         return _calculateStats(requests);
       } catch (e) {
-        print('Erreur lors de la récupération des statistiques depuis le stockage partagé: $e');
-        // Retourner des statistiques vides en cas d'erreur
+        print('[DashboardService] Erreur récupération stats local: $e');
         return DashboardStats(
           enAttente: 0,
           approuvees: 0,
@@ -100,80 +85,79 @@ class DashboardService {
     }
   }
 
-  // Calculer les statistiques à partir des demandes
+  // Calculer les stats à partir d'une liste de demandes
   DashboardStats _calculateStats(List<Request> requests) {
     int enAttente = 0;
     int approuvees = 0;
     int refusees = 0;
-    
-    // Déboguer les demandes pour vérifier les statuts
-    print('Nombre total de demandes: ${requests.length}');
-    for (var request in requests) {
-      String status = request.status.toLowerCase();
-      print('Demande ${request.id}: Type=${request.type}, Status=${request.status}');
-      
-      if (status == 'en attente' || status.contains('attente')) {
+
+    print(
+        '[DashboardService] Calcul des statistiques pour ${requests.length} demandes');
+
+    for (var r in requests) {
+      final status = r.status.toLowerCase();
+      print(' - Demande ${r.id} : status="${r.status}"');
+
+      if (status.contains('attente')) {
         enAttente++;
-      } else if (status == 'approuvée' || status == 'approuvee' || status.contains('approuv')) {
+      } else if (status.contains('approuv')) {
         approuvees++;
-      } else if (status == 'refusée' || status == 'refusee' || status.contains('refus') || status == 'rejetée' || status.contains('rejet')) {
+      } else if (status.contains('refus') || status.contains('rejet')) {
         refusees++;
       }
     }
-    
-    // Afficher les statistiques calculées
-    print('Statistiques calculées - En attente: $enAttente, Approuvées: $approuvees, Refusées: $refusees, Total: ${requests.length}');
-    
-    // Trier les demandes par date (les plus récentes d'abord)
-    requests.sort((a, b) { 
-      try {
-        final dateA = a.createdAt ?? '';
-        final dateB = b.createdAt ?? '';
-        // Si les dates sont au format dd/MM/yyyy
-        if (dateA.contains('/') && dateB.contains('/')) {
-          var partsA = dateA.split('/');
-          var partsB = dateB.split('/');
-          if (partsA.length == 3 && partsB.length == 3) {
-            var dateObjA = DateTime(int.parse(partsA[2]), int.parse(partsA[1]), int.parse(partsA[0]));
-            var dateObjB = DateTime(int.parse(partsB[2]), int.parse(partsB[1]), int.parse(partsB[0]));
-            return dateObjB.compareTo(dateObjA);
+
+    print(
+        '[DashboardService] Stats calculées: enAttente=$enAttente, approuvees=$approuvees, refusees=$refusees, total=${requests.length}');
+
+    // Trier par date (descendant)
+    requests.sort((a, b) {
+      DateTime parseDate(String? dateStr) {
+        if (dateStr == null) return DateTime(1970);
+        try {
+          if (dateStr.contains('/')) {
+            // Format dd/MM/yyyy
+            final parts = dateStr.split('/');
+            if (parts.length == 3) {
+              return DateTime(
+                int.parse(parts[2]),
+                int.parse(parts[1]),
+                int.parse(parts[0]),
+              );
+            }
           }
+          return DateTime.parse(dateStr);
+        } catch (_) {
+          return DateTime(1970);
         }
-        // Sinon essayer le format ISO
-        return DateTime.parse(dateB).compareTo(DateTime.parse(dateA));
-      } catch (e) {
-        // En cas d'erreur, ne pas changer l'ordre
-        return 0;
       }
+
+      final dateA = parseDate(a.createdAt);
+      final dateB = parseDate(b.createdAt);
+      return dateB.compareTo(dateA);
     });
-    
-    // Prendre les 5 demandes les plus récentes
-    List<Request> recentRequests = requests.take(5).toList();
-    
+
+    final recent = requests.take(5).toList();
+
     return DashboardStats(
       enAttente: enAttente,
       approuvees: approuvees,
       refusees: refusees,
       total: requests.length,
-      recentRequests: recentRequests,
+      recentRequests: recent,
     );
   }
 
-  // Charger les données directement depuis l'API
+  // Charger les données depuis l'API et notifier les listeners
   Future<void> loadDataFromApi() async {
     try {
-      // Récupérer les données directement depuis l'API
       final requests = await _requestService.getUserRequests();
-      print('Chargement des données depuis l\'API réussi: ${requests.length} demandes récupérées');
-      
-      // Calculer les statistiques
+      print(
+          '[DashboardService] Données API chargées: ${requests.length} demandes');
       final stats = _calculateStats(requests);
-      
-      // Notifier les écouteurs
       _dashboardStatsController.add(stats);
     } catch (e) {
-      print('Erreur lors du chargement des données depuis l\'API: $e');
-      // En cas d'erreur, essayer de charger les données locales
+      print('[DashboardService] Erreur chargement données API: $e');
       await loadLocalData();
     }
   }

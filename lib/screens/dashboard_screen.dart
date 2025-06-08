@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/request.dart';
+import '../models/dashboard_stats.dart';
 import '../services/dashboard_service.dart';
-import '../services/shared_storage_service.dart';
 import '../utils/date_formatter.dart';
 import '../widgets/sync_status_widget.dart';
 import 'request_detail_screen.dart';
@@ -17,27 +16,17 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
-  final SharedStorageService _sharedStorage = SharedStorageService();
+
   bool _isLoading = true;
   String? _error;
   late DashboardStats _stats;
-  
-  // Abonnement au stream de statistiques
+
   StreamSubscription<DashboardStats>? _statsSubscription;
-  
-  @override
-  void dispose() {
-    _statsSubscription?.cancel();
-    _dashboardService.dispose();
-    _sharedStorage.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
     super.initState();
-    
-    // S'abonner au stream de statistiques
+
     _statsSubscription = _dashboardService.dashboardStatsStream.listen((stats) {
       setState(() {
         _stats = stats;
@@ -45,9 +34,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _error = null;
       });
     });
-    
-    // Charger les données initiales
+
     _loadDashboard();
+  }
+
+  @override
+  void dispose() {
+    _statsSubscription?.cancel();
+    _dashboardService.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDashboard() async {
@@ -55,14 +50,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isLoading = true;
       _error = null;
     });
-    
+
     try {
-      // Charger les données directement depuis l'API
-      await _sharedStorage.loadDataFromApi();
-      
-      // Récupérer les statistiques
       _stats = await _dashboardService.getDashboardStats();
-      
+
       setState(() {
         _isLoading = false;
       });
@@ -129,7 +120,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date et bienvenue
             Text(
               'Bienvenue, ${DateFormatter.formatDateWithDay(DateTime.now())}',
               style: const TextStyle(
@@ -138,11 +128,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Widget de statut de synchronisation
             SyncStatusWidget(onRefresh: _loadDashboard),
             const SizedBox(height: 16),
-            
+
             // Cartes de statistiques
             Row(
               children: [
@@ -187,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            
+
             // Demandes récentes
             const SizedBox(height: 32),
             Row(
@@ -209,8 +199,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            
-            // Liste des demandes récentes
             _stats.recentRequests.isEmpty
                 ? _buildEmptyRequestsWidget()
                 : Column(
@@ -224,7 +212,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+      String title, String value, Color color, IconData icon) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -360,7 +349,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormatter.formatDateRange(request.startDate, request.endDate),
+                    DateFormatter.formatDateRange(
+                        request.startDate, request.endDate),
                     style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
